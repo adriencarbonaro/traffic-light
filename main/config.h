@@ -1,0 +1,13 @@
+#ifndef CONFIG_H_
+#define CONFIG_H_
+
+#include "sdkconfig.h"
+
+#define WIFI_SSID                       CONFIG_WIFI_SSID
+#define WIFI_PASSWORD                   CONFIG_WIFI_PASSWORD
+
+#define MQTT_URI                        CONFIG_MQTT_URI
+#define MQTT_TOPIC_PREFIX               CONFIG_MQTT_TOPIC_PREFIX
+#define MQTT_TOPIC_VERSION              CONFIG_MQTT_TOPIC_VERSION
+
+#endif /* CONFIG_H_ */

@@ -1,0 +1,22 @@
+menu "Traffic Light Settings"
+
+# Wifi configuration -----------------------------------------------------------
+
+config WIFI_SSID
+    string "WiFi SSID"
+
+config WIFI_PASSWORD
+    string "WiFi Password"
+
+# MQTT configuration -----------------------------------------------------------
+
+config MQTT_URI
+    string "MQTT Uri (format: mqtt://[USER]:[PASSWORD]@[HOST]:[PORT])"
+
+config MQTT_TOPIC_PREFIX
+    string "MQTT topic prefix"
+
+config MQTT_TOPIC_VERSION
+    string "MQTT version topic name"
+
+endmenu
