@@ -35,7 +35,6 @@ static int is_topic(const char* config_topic,
                     const char* topic,
                     uint16 topic_len)
 {
-    ESP_LOGI(TAG, "comparing %s (%u) and %s (%u)", config_topic, config_topic_len, topic, topic_len);
     return (config_topic_len == topic_len) &&
            (memcmp(config_topic, topic, topic_len) == 0);
 }
@@ -101,7 +100,7 @@ static void mqtt_event_handler(void* event_handler_arg,
 
         case MQTT_EVENT_DATA:
         {
-            ESP_LOGI(TAG, "Received message on topic %.*s: %.*s",
+            ESP_LOGV(TAG, "Received message on topic %.*s: %.*s",
                      event->topic_len, event->topic,
                      event->data_len, event->data);
 
