@@ -4,7 +4,7 @@
 #define BUTTON_IO_NUM                   9
 #define BUTTON_ACTIVE_LEVEL             0
 
-#define BUTTON_LONG_PRESS_TIME          5000
+#define BUTTON_LONG_PRESS_TIME          1000
 #define BUTTON_SHORT_PRESS_TIME         200
 
 #endif /* BUTTON_CONFIG_H_ */

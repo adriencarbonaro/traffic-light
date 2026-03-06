@@ -10,7 +10,7 @@ typedef enum {
 
 typedef struct {
     char* mode_name;
-    void* data;
+    char* data;
 } add_mode_event_t;
 
 typedef struct {
@@ -19,7 +19,8 @@ typedef struct {
 
 typedef struct {
     mode_event_id event_id;
-    void* event_data;
+    char* event_data;
+    uint16_t event_data_len;
 } mode_event_t;
 
 void mode_manager_init(void);

@@ -53,10 +53,10 @@ void button_init(void)
     esp_err_t ret = iot_button_new_gpio_device(&btn_cfg, &btn_gpio_cfg, &btn);
 
     const button_init_t button_init[] = {
-        { BUTTON_SINGLE_CLICK,  NULL, button_single_click_event_cb, NULL },
-        { BUTTON_DOUBLE_CLICK,  NULL, button_double_click_event_cb, NULL },
-        { BUTTON_LONG_PRESS_UP, NULL, button_long_press_event_cb,   NULL },
-        { BUTTON_PRESS_REPEAT,  NULL, button_repeat_event_cb,       NULL },
+        { BUTTON_SINGLE_CLICK,     NULL, button_single_click_event_cb, NULL },
+        { BUTTON_DOUBLE_CLICK,     NULL, button_double_click_event_cb, NULL },
+        { BUTTON_LONG_PRESS_START, NULL, button_long_press_event_cb,   NULL },
+        { BUTTON_PRESS_REPEAT,     NULL, button_repeat_event_cb,       NULL },
     };
 
     for (uint16 i = 0; i < ARRAY_DIM(button_init); i++)

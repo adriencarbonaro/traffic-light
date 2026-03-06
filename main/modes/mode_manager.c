@@ -1,5 +1,6 @@
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
+#include "freertos/queue.h"
 #include "freertos/task.h"
 #include "types.h"
 
@@ -17,6 +18,8 @@ typedef struct {
 
 /* Static const objects *******************************************************/
 static const char* TAG = "mode_manager";
+static mode_event_t new_event = {0};
+static QueueHandle_t mode_manager_queue = NULL;
 
 /* Static objects *************************************************************/
 
@@ -24,11 +27,6 @@ mode_manager_task_data_t task_data = {0};
 TaskHandle_t mode_manager_task_handle = NULL;
 
 /* Static functions ***********************************************************/
-
-static void change_mode(mode_t msg)
-{
-    ESP_LOGI(TAG, "changing mode: %u", msg);
-}
 
 /* Public functions ***********************************************************/
 
@@ -38,19 +36,18 @@ void mode_manager_task(void* arg)
     {
         ESP_LOGI(TAG, "run");
 
-        if (xTaskNotifyWait(0, 0xffffffff, &msg, pdMS_TO_TICKS(200)))
+        if (xQueueReceive(mode_manager_queue, &new_event, pdMS_TO_TICKS(200)))
         {
-            mode_event_t* event = (mode_event_t*)msg;
-            switch (event->event_id)
+            switch (new_event.event_id)
             {
                 case MODE_EVENT_ADD:
                 {
-                    ESP_LOGI(TAG, "MODE_EVENT_ADD");
+                    ESP_LOGI(TAG, "MODE_EVENT_ADD, event_id=%u, event_data=%.*s", new_event.event_id, new_event.event_data_len, new_event.event_data);
                     break;
                 }
                 case MODE_EVENT_SET:
                 {
-                    ESP_LOGI(TAG, "MODE_EVENT_SET");
+                    ESP_LOGI(TAG, "MODE_EVENT_SET, event_id=%u, event_data=%.*s", new_event.event_id, new_event.event_data_len, new_event.event_data);
                     break;
                 }
                 default:
@@ -64,12 +61,19 @@ void mode_manager_task(void* arg)
     }
 }
 
-void mode_manager_event(mode_event_id id, void *data, uint16 data_len)
+void mode_manager_event(mode_event_id id, void* data, uint16 data_len)
 {
-    struct { mode_event_id id; void* data; } event;
-    event.id = id;
-    memcpy(event.data, data, data_len);
-    xTaskNotify(mode_manager_task_handle, &event, eSetValueWithOverwrite);
+    mode_event_t event;
+    event.event_id = id;
+    event.event_data = (char*)malloc(data_len * sizeof(char));
+    if (!event.event_data)
+    {
+        ESP_LOGE(TAG, "failed to allocate memory");
+        return;
+    }
+    memcpy(&event.event_data, (char*)data, data_len);
+    event.event_data_len = data_len;
+    // xQueueSend(mode_manager_queue, &event, 0);
 }
 
 void mode_manager_init(void)
@@ -78,10 +82,12 @@ void mode_manager_init(void)
 
     task_data.mode = MODE_INIT;
 
+    mode_manager_queue = xQueueCreate(10, sizeof(mode_event_t));
+
     xTaskCreate(mode_manager_task,
                 "mode_manager_task",
                 8192,
                 NULL,
                 tskIDLE_PRIORITY,
-                &mode_manager_task_handle);
+                NULL);
 }

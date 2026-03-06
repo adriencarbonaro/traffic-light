@@ -1,6 +1,7 @@
 set(srcs
     button/button.c
     led/led.c
+    led/led_default_modes.c
     main.c
     modes/mode_manager.c
     mqtt/mqtt.c
