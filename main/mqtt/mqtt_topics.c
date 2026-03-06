@@ -3,6 +3,7 @@
 #include "types.h"
 #include "config.h"
 #include "utils.h"
+#include "mode_manager.h"
 
 /* Defines ********************************************************************/
 
@@ -32,11 +33,13 @@ static const mqtt_config_t mqtt_config_table[] = {
 static void on_mode_set(const char* msg, uint16 msg_len)
 {
     ESP_LOGI(TAG, "%s: %.*s", __FUNCTION__, msg_len, msg);
+    mode_manager_event(MODE_EVENT_SET, (void*)&msg, msg_len);
 }
 
 static void on_mode_add(const char* msg, uint16 msg_len)
 {
     ESP_LOGI(TAG, "%s: %.*s", __FUNCTION__, msg_len, msg);
+    mode_manager_event(MODE_EVENT_ADD, (void*)&msg, msg_len);
 }
 
 static void on_manual(const char* msg, uint16 msg_len)
