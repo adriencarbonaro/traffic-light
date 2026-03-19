@@ -1,19 +1,20 @@
+#include "mqtt.h"
 #include "config.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
 #include "freertos/event_groups.h"
-#include "freertos/projdefs.h"
 #include "freertos/portmacro.h"
+#include "freertos/projdefs.h"
+#include "freertos/task.h"
 #include "mode_manager.h"
-#include "mqtt.h"
 #include "string.h"
-#include "utils/types.h"
 #include "utils.h"
+#include "utils/types.h"
 #include "version.h"
 #include "wifi.h"
 
-typedef struct {
+typedef struct
+{
     const mqtt_config_t* config_table;
     uint16 config_table_size;
 } mqtt_task_data_t;
@@ -72,9 +73,7 @@ static void mqtt_event_handler(void* event_handler_arg,
             {
                 mqtt_config_t config_table = task_data.config_table[i];
                 ESP_LOGI(TAG, "Subscribing to topic %s", config_table.topic);
-                esp_mqtt_client_subscribe(event->client,
-                                          config_table.topic,
-                                          0);
+                esp_mqtt_client_subscribe(event->client, config_table.topic, 0);
             }
 
             send_version();
@@ -100,11 +99,17 @@ static void mqtt_event_handler(void* event_handler_arg,
 
         case MQTT_EVENT_DATA:
         {
-            ESP_LOGV(TAG, "Received message on topic %.*s: %.*s",
-                     event->topic_len, event->topic,
-                     event->data_len, event->data);
+            ESP_LOGV(TAG,
+                     "Received message on topic %.*s: %.*s",
+                     event->topic_len,
+                     event->topic,
+                     event->data_len,
+                     event->data);
 
-            on_msg(event->topic, event->topic_len, event->data, event->data_len);
+            on_msg(event->topic,
+                   event->topic_len,
+                   event->data,
+                   event->data_len);
             break;
         }
 
@@ -124,8 +129,7 @@ static void mqtt_event_handler(void* event_handler_arg,
 
 static void publish(const char* topic, const char* msg)
 {
-    if (mqtt_client == NULL)
-        return;
+    if (mqtt_client == NULL) return;
 
     esp_mqtt_client_publish(mqtt_client, topic, msg, 0, 1, 0);
 }

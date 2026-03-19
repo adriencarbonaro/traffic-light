@@ -6,7 +6,8 @@
 
 typedef void (*handler_t)(const char* msg, uint16 msg_len);
 
-typedef struct {
+typedef struct
+{
     const char* topic;
     handler_t handler;
 } mqtt_config_t;

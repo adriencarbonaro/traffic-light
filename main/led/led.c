@@ -1,12 +1,13 @@
+#include "led.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
 #include "freertos/queue.h"
-#include "led.h"
+#include "freertos/task.h"
 #include "string.h"
 #include "time.h"
 
-typedef struct {
+typedef struct
+{
     layout_t current_layout;
     uint16_t stage_index;
     uint32_t stage_start_time;
@@ -62,8 +63,7 @@ void led_task(void* arg)
             task_data.stage_start_time = xTaskGetTickCount();
         }
 
-        if (task_data.current_layout.nb_stages > 0)
-            run_layout();
+        if (task_data.current_layout.nb_stages > 0) run_layout();
 
         vTaskDelay(pdMS_TO_TICKS(10));
     }

@@ -3,21 +3,25 @@
 
 #include "types.h"
 
-typedef enum {
+typedef enum
+{
     MODE_EVENT_SET,
     MODE_EVENT_ADD,
 } mode_event_id;
 
-typedef struct {
+typedef struct
+{
     char* mode_name;
     char* data;
 } add_mode_event_t;
 
-typedef struct {
+typedef struct
+{
     char* mode_name;
 } set_mode_event_t;
 
-typedef struct {
+typedef struct
+{
     mode_event_id event_id;
     char* event_data;
     uint16_t event_data_len;

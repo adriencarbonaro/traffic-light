@@ -1,18 +1,27 @@
+#include "mode_manager.h"
+
+#include "driver/gpio.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "freertos/task.h"
 #include "types.h"
 
-#include "mode_manager.h"
+#define IO_RED 9
+#define IO_ORANGE 8
+#define IO_GREEN 20
+
+#define GPIO_OUTPUT_PIN_MASK BIT(IO_RED) | BIT(IO_ORANGE) | BIT(IO_GREEN);
 
 /* Defines ********************************************************************/
 
-typedef enum {
+typedef enum
+{
     MODE_INIT,
 } mode_t;
 
-typedef struct {
+typedef struct
+{
     mode_t mode;
 } mode_manager_task_data_t;
 
@@ -29,25 +38,47 @@ TaskHandle_t mode_manager_task_handle = NULL;
 /* Static functions ***********************************************************/
 
 /* Public functions ***********************************************************/
+static uint16_t toggle = 0;
 
 void mode_manager_task(void* arg)
 {
-    while(1)
-    {
-        ESP_LOGI(TAG, "run");
+    gpio_config_t io_conf = {};
 
-        if (xQueueReceive(mode_manager_queue, &new_event, pdMS_TO_TICKS(200)))
+    io_conf.intr_type = GPIO_INTR_DISABLE;
+    io_conf.mode = GPIO_MODE_OUTPUT;
+    io_conf.pin_bit_mask = GPIO_OUTPUT_PIN_MASK;
+    io_conf.pull_down_en = 0;
+    io_conf.pull_up_en = 0;
+    gpio_config(&io_conf);
+
+    while (1)
+    {
+        toggle = !toggle;
+        ESP_LOGI(TAG, "toggle=%u", toggle);
+        gpio_set_level(IO_RED, toggle);
+        gpio_set_level(IO_ORANGE, toggle);
+        gpio_set_level(IO_GREEN, toggle);
+
+        if (xQueueReceive(mode_manager_queue, &new_event, pdMS_TO_TICKS(600)))
         {
             switch (new_event.event_id)
             {
                 case MODE_EVENT_ADD:
                 {
-                    ESP_LOGI(TAG, "MODE_EVENT_ADD, event_id=%u, event_data=%.*s", new_event.event_id, new_event.event_data_len, new_event.event_data);
+                    ESP_LOGI(TAG,
+                             "MODE_EVENT_ADD, event_id=%u, event_data=%.*s",
+                             new_event.event_id,
+                             new_event.event_data_len,
+                             new_event.event_data);
                     break;
                 }
                 case MODE_EVENT_SET:
                 {
-                    ESP_LOGI(TAG, "MODE_EVENT_SET, event_id=%u, event_data=%.*s", new_event.event_id, new_event.event_data_len, new_event.event_data);
+                    ESP_LOGI(TAG,
+                             "MODE_EVENT_SET, event_id=%u, event_data=%.*s",
+                             new_event.event_id,
+                             new_event.event_data_len,
+                             new_event.event_data);
                     break;
                 }
                 default:
