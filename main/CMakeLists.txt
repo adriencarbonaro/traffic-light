@@ -4,9 +4,7 @@ set(srcs
     led/led_default_modes.c
     main.c
     modes/mode_manager.c
-    mqtt/mqtt.c
-    mqtt/mqtt_topics.c
-    mqtt/mqtt.h
+    http/http_server.c
     utils/types.h
     utils/utils.h
     wifi/wifi.c
@@ -17,13 +15,14 @@ idf_component_register(
     SRCS ${srcs}
     INCLUDE_DIRS "."
                  "button"
+                 "http"
                  "led"
                  "modes"
-                 "mqtt"
                  "utils"
                  "wifi"
     REQUIRES esp_driver_gpio
              esp_http_client
+             esp_http_server
              esp_wifi
              nvs_flash
              mqtt

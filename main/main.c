@@ -14,9 +14,9 @@
 
 #include "button.h"
 #include "config.h"
+#include "http_server.h"
 #include "led.h"
 #include "mode_manager.h"
-#include "mqtt.h"
 #include "utils.h"
 #include "utils/types.h"
 #include "wifi.h"
@@ -27,7 +27,9 @@
 /* Static functions ***********************************************************/
 void app_main(void)
 {
-    wifi_init(mqtt_init, NULL);
+    wifi_init();
+
+    http_server_init();
 
     mode_manager_init();
 

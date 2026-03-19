@@ -54,7 +54,6 @@ void mode_manager_task(void* arg)
     while (1)
     {
         toggle = !toggle;
-        ESP_LOGI(TAG, "toggle=%u", toggle);
         gpio_set_level(IO_RED, toggle);
         gpio_set_level(IO_ORANGE, toggle);
         gpio_set_level(IO_GREEN, toggle);

@@ -12,14 +12,6 @@
 
 static const char* TAG = "wifi";
 
-typedef struct
-{
-    wifi_callback_t on_connected_callback;
-    wifi_callback_t on_disconnected_callback;
-} wifi_task_data_t;
-
-static wifi_task_data_t wifi_task = {0};
-
 static void wifi_event_handler(void* arg,
                                esp_event_base_t event_base,
                                int32 event_id,
@@ -38,7 +30,6 @@ static void wifi_event_handler(void* arg,
     {
         ip_event_got_ip_t* event = (ip_event_got_ip_t*)event_data;
         ESP_LOGI(TAG, "Got IP: " IPSTR, IP2STR(&event->ip_info.ip));
-        if (wifi_task.on_connected_callback) wifi_task.on_connected_callback();
     }
     else if (event_base == WIFI_EVENT &&
              event_id == WIFI_EVENT_STA_DISCONNECTED)
@@ -46,17 +37,11 @@ static void wifi_event_handler(void* arg,
         wifi_event_sta_disconnected_t* d =
             (wifi_event_sta_disconnected_t*)event_data;
         ESP_LOGW(TAG, "Disconnected, reason: %d", d->reason);
-        if (wifi_task.on_disconnected_callback)
-            wifi_task.on_disconnected_callback();
     }
 }
 
-void wifi_init(wifi_callback_t on_connected, wifi_callback_t on_disconnected)
+void wifi_init(void)
 {
-    memset(&wifi_task, 0, sizeof(wifi_task));
-    wifi_task.on_connected_callback = on_connected;
-    wifi_task.on_disconnected_callback = on_disconnected;
-
     ESP_ERROR_CHECK(nvs_flash_init());
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
