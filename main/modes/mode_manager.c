@@ -71,9 +71,9 @@ void mode_manager_event(mode_event_id id, void* data, uint16 data_len)
         ESP_LOGE(TAG, "failed to allocate memory");
         return;
     }
-    memcpy(&event.event_data, (char*)data, data_len);
+    memcpy(event.event_data, (char*)data, data_len);
     event.event_data_len = data_len;
-    // xQueueSend(mode_manager_queue, &event, 0);
+    xQueueSend(mode_manager_queue, &event, 0);
 }
 
 void mode_manager_init(void)
