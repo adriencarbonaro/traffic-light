@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 
-import datetime
 import os
 import re
 import subprocess
+import sys
 
-VERSION_FILE   = os.path.join("main", "version.h")
+VERSION_FILE   = sys.argv[1]
+REPO_PATH      = sys.argv[2]
 
 # Regex patterns
 SEMVER_PATTERN = "^v(?P<semver>(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)(?:-(?P<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?P<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?)$"
@@ -20,14 +21,12 @@ SEMVER_FLAGS  = COMMON_FLAGS + ["--abbrev=0"]
 FULL_FLAGS    = COMMON_FLAGS + ["--dirty"]
 
 def execCommand(args: list):
-  return subprocess.check_output(args)
+  return subprocess.check_output(args, cwd=REPO_PATH)
 
 def decodeOutput(output: str):
   return output.decode('utf-8').replace("\n", "").replace("\r", "")
 
 def makeVersion():
-  print("updating version...")
-
   semver       = decodeOutput(execCommand(GIT_DESCRIBE + SEMVER_FLAGS))
   full_version = decodeOutput(execCommand(GIT_DESCRIBE + FULL_FLAGS))
   build        = decodeOutput(execCommand(GIT_REV_PARSE))
@@ -58,17 +57,17 @@ def makeVersion():
   else:
     GAP             = "0"
 
-  print("  version: {} - {}".format(VERSION, build))
+  print("Version: {} - {}".format(VERSION if VERSION else "0.0.0", build))
 
-  date = datetime.datetime.now().isoformat(sep=" ", timespec="seconds")
   header_content = """/** ---------------------------------------------------------
-* @file %s
-*
-* @warning Generated automatically -- DO NOT EDIT MANUALLY
-* @date    %s
-* @author  Adrien Carbonaro
-* ---------------------------------------------------------- */\n\n""" \
-  %(VERSION_FILE, date)
+ * @file %s
+ *
+ * @warning Generated automatically -- DO NOT EDIT MANUALLY
+ * @author  Orosound
+ *
+ * Copyright (c) 2025 Orosound - All rights reserved.
+ * ---------------------------------------------------------- */\n\n""" \
+  %(os.path.basename(VERSION_FILE))
 
   core_template = """#ifndef VERSION_H_
 #define VERSION_H_
@@ -113,15 +112,19 @@ typedef struct
 
   file_content = header_content + core_content
 
+  # read and check file is different
+  os.makedirs(os.path.dirname(VERSION_FILE), exist_ok=True)
+  print("Version file:", VERSION_FILE)
   if os.path.isfile(VERSION_FILE):
-    os.remove(VERSION_FILE)
+    with open(VERSION_FILE, "r") as f:
+      existing_content = f.read()
+      if existing_content == file_content:
+        print("Version file is up to date, skipping.")
+        return (VERSION, build)
 
-  print("  writing file:", VERSION_FILE)
-  f = open(VERSION_FILE, "w")
-  f.write(file_content)
-  f.close()
-
-  print("done")
+  with open(VERSION_FILE, "w") as f:
+    f.write(file_content)
+    f.close()
 
   return (VERSION, build)
 

@@ -27,3 +27,8 @@ idf_component_register(
              nvs_flash
              mqtt
 )
+
+# Add build directory to resolve version.h
+target_include_directories(${COMPONENT_LIB} PRIVATE
+    "${CMAKE_BINARY_DIR}/"
+)

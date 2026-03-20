@@ -18,7 +18,7 @@ export BATCH_BUILD=1
 all: build
 
 version:
-	python make_version.py
+	python scripts/make_version.py ${BUILD_DIR}/version.h .
 
 # --- Build rules ---
 menuconfig:
