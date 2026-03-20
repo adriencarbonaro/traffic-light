@@ -11,12 +11,12 @@ static esp_err_t on_command(httpd_req_t* req);
 /* Defines ********************************************************************/
 
 #define REQ(x, method) \
-    static const httpd_uri_t x = {"/" #x, method, on_##x, NULL};
+    static const httpd_uri_t x##_uri = {"/" #x, method, on_##x, NULL};
 
-#define GET(x) static const httpd_uri_t x = {"/" #x, HTTP_GET, on_##x, NULL};
-#define POST(x) static const httpd_uri_t x = {"/" #x, HTTP_POST, on_##x, NULL};
+#define GET(x) REQ(x, HTTP_GET)
+#define POST(x) REQ(x, HTTP_POST)
 
-#define REGISTER(x) httpd_register_uri_handler(server, &x);
+#define REGISTER(x) httpd_register_uri_handler(server, &x##_uri);
 
 /* Global objects *************************************************************/
 
@@ -39,10 +39,12 @@ static esp_err_t on_version(httpd_req_t* req)
              "{"
              "\"firmware\":\"traffic-light\","
              "\"version\":\"%s\","
+             "\"build_id\":\"%s\","
              "\"build_date\":\"%s\","
              "\"build_time\":\"%s\","
              "\"chip\":\"ESP32-C3\""
              "}",
+             VERSION,
              BUILD_ID_SHORT,
              __DATE__,
              __TIME__);
