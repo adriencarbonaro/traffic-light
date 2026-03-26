@@ -63,9 +63,7 @@ def makeVersion():
  * @file %s
  *
  * @warning Generated automatically -- DO NOT EDIT MANUALLY
- * @author  Orosound
- *
- * Copyright (c) 2025 Orosound - All rights reserved.
+ * @author  Adrien Carbonaro
  * ---------------------------------------------------------- */\n\n""" \
   %(os.path.basename(VERSION_FILE))
 
