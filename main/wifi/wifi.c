@@ -8,13 +8,12 @@
 #include "esp_netif.h"
 #include "esp_wifi.h"
 #include "nvs_flash.h"
-#include "types.h"
 
 static const char* TAG = "wifi";
 
 static void wifi_event_handler(void* arg,
                                esp_event_base_t event_base,
-                               int32 event_id,
+                               int32_t event_id,
                                void* event_data)
 {
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START)

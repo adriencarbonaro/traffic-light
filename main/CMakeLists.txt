@@ -4,8 +4,8 @@ set(srcs
     led/led_default_modes.c
     main.c
     modes/mode_manager.c
+    modes/mode_decoder.c
     http/http_server.c
-    utils/types.h
     utils/utils.h
     wifi/wifi.c
     wifi/wifi.h

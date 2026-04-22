@@ -2,7 +2,6 @@
 #include "button_gpio.h"
 #include "esp_log.h"
 #include "iot_button.h"
-#include "types.h"
 #include "utils.h"
 
 typedef struct
@@ -60,7 +59,7 @@ void button_init(void)
         {BUTTON_PRESS_REPEAT, NULL, button_repeat_event_cb, NULL},
     };
 
-    for (uint16 i = 0; i < ARRAY_DIM(button_init); i++)
+    for (uint16_t i = 0; i < ARRAY_DIM(button_init); i++)
     {
         const button_init_t item = button_init[i];
         ret = iot_button_register_cb(btn,

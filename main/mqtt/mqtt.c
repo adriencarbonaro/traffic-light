@@ -9,7 +9,6 @@
 #include "mode_manager.h"
 #include "string.h"
 #include "utils.h"
-#include "utils/types.h"
 #include "version.h"
 #include "wifi.h"
 

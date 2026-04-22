@@ -1,14 +1,17 @@
 #ifndef LED_H
 #define LED_H
 
-#include "types.h"
+#include <stdint.h>
 
 #ifndef BIT
 #define BIT(x) (1 << (x))
 #endif
-#define MAX_NB_STAGES 10
+
+#define MAX_STEPS 10
 
 typedef uint8_t led_mask_t;
+
+typedef struct mode_t mode_t;
 
 typedef enum
 {
@@ -21,21 +24,15 @@ typedef enum
 #define LED_GREEN BIT(LED_BIT_GREEN)
 #define LED_ORANGE BIT(LED_BIT_ORANGE)
 #define LED_RED BIT(LED_BIT_RED)
+#define LED_ALL LED_GREEN | LED_ORANGE | LED_RED
 
 typedef struct
 {
-    led_mask_t led_mask;
-    uint32_t duration_ms;
-} layout_stage_t;
-
-typedef struct
-{
-    const char* name;
-    layout_stage_t stages[MAX_NB_STAGES];
-    uint16_t nb_stages;
-    bool loop;
-} layout_t;
+    led_mask_t mask;
+    uint16_t duration;
+} led_step_t;
 
 void led_init(void);
+void led_set(const mode_t* mode);
 
 #endif /* LED_H */

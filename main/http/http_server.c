@@ -78,7 +78,7 @@ static esp_err_t on_command(httpd_req_t* req)
 
         ESP_LOG_BUFFER_HEX(TAG, buf, ret);
 
-        mode_manager_event(MODE_EVENT_SET, (void*)buf, ret);
+        mode_manager_event((void*)buf, ret);
     }
 
     httpd_resp_send_chunk(req, NULL, 0);
