@@ -25,7 +25,6 @@ idf_component_register(
              esp_http_server
              esp_wifi
              nvs_flash
-             mqtt
 )
 
 # Add build directory to resolve version.h
