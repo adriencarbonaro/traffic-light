@@ -11,7 +11,7 @@ typedef enum
 
 #define MODE(name_, loop_, ...)                                               \
     {                                                                         \
-        .name = name_, .steps = {__VA_ARGS__},                                \
+        .name = name_, .name_len = sizeof(name_) - 1, .steps = {__VA_ARGS__}, \
         .nb_steps = sizeof((led_step_t[]){__VA_ARGS__}) / sizeof(led_step_t), \
         .loop = loop_                                                         \
     }
