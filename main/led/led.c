@@ -93,9 +93,9 @@ void led_task(void* arg)
         if (xQueueReceive(led_queue, &new_mode, 0))
         {
             ESP_LOGI(TAG,
-                     "receiving (nb_steps=%u, duration_first_step=%u)",
+                     "receiving (nb_steps=%u, duration_first_step=%lu ms)",
                      new_mode.nb_steps,
-                     new_mode.steps[0].duration);
+                     (unsigned long)new_mode.steps[0].duration);
             task_data.current_mode = new_mode;
             task_data.step_index = 0;
             task_data.step_start_time = pdTICKS_TO_MS(xTaskGetTickCount());

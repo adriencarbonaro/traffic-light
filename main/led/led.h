@@ -29,7 +29,7 @@ typedef enum
 typedef struct
 {
     led_mask_t mask;
-    uint16_t duration;
+    uint32_t duration;
 } led_step_t;
 
 void led_init(void);

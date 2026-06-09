@@ -22,6 +22,13 @@ static inline size_t read_uint16(const uint8_t* data, uint16_t* dest)
     return sizeof(uint16_t);
 }
 
+static inline size_t read_uint32(const uint8_t* data, uint32_t* dest)
+{
+    *dest = (uint32_t)data[0] | ((uint32_t)data[1] << 8) |
+            ((uint32_t)data[2] << 16) | ((uint32_t)data[3] << 24);
+    return sizeof(uint32_t);
+}
+
 static inline size_t read_str(const uint8_t* data, uint8_t* dest, uint16_t len)
 {
     memcpy(dest, data, len);
@@ -57,7 +64,7 @@ void parse_command(const uint8_t* data,
             for (uint16_t i = 0; i < mode->nb_steps; i++)
             {
                 idx += read_uint8(&data[idx], &mode->steps[i].mask);
-                idx += read_uint16(&data[idx], &mode->steps[i].duration);
+                idx += read_uint32(&data[idx], &mode->steps[i].duration);
             }
 
             break;
@@ -70,7 +77,7 @@ void parse_command(const uint8_t* data,
             for (uint16_t i = 0; i < mode->nb_steps; i++)
             {
                 idx += read_uint8(&data[idx], &mode->steps[i].mask);
-                idx += read_uint16(&data[idx], &mode->steps[i].duration);
+                idx += read_uint32(&data[idx], &mode->steps[i].duration);
             }
 
             break;
@@ -89,8 +96,8 @@ void parse_command(const uint8_t* data,
     {
         ESP_LOGI(TAG, "  step %u", i);
         ESP_LOGI(TAG,
-                 "    mask=0x%02x, duration=%u",
+                 "    mask=0x%02x, duration=%lu ms",
                  mode->steps[i].mask,
-                 mode->steps[i].duration);
+                 (unsigned long)mode->steps[i].duration);
     }
 }

@@ -37,21 +37,21 @@ esp_err_t mode_manager_set_active(const char* name, uint16_t name_len)
     {
         ESP_LOGI(
             TAG,
-            "Is it: %.*s, nb_steps=%u, step[0].mask=%02x, step[0].duration=%u",
+            "Is it: %.*s, nb_steps=%u, step[0].mask=%02x, step[0].duration=%lu",
             task_data.modes[i].name_len,
             task_data.modes[i].name,
             task_data.modes[i].nb_steps,
             task_data.modes[i].steps[0].mask,
-            task_data.modes[i].steps[0].duration);
+            (unsigned long)task_data.modes[i].steps[0].duration);
         if (strncmp(task_data.modes[i].name, (const char*)name, name_len) == 0)
         {
             task_data.active_mode = &task_data.modes[i];
             ESP_LOGI(TAG,
-                     "Switching active mode for: %.*s, %u, %u",
+                     "Switching active mode for: %.*s, %u, %lu",
                      task_data.active_mode->name_len,
                      task_data.active_mode->name,
                      task_data.active_mode->nb_steps,
-                     task_data.active_mode->steps[0].duration);
+                     (unsigned long)task_data.active_mode->steps[0].duration);
             led_set(task_data.active_mode);
             return ESP_OK;
         }
@@ -73,22 +73,22 @@ esp_err_t mode_manager_add(const mode_t* new_mode)
     }
 
     ESP_LOGI(TAG,
-             "Adding mode: %.*s, nb_steps=%u, mask[0]=%02x, duration[0]=%u",
+             "Adding mode: %.*s, nb_steps=%u, mask[0]=%02x, duration[0]=%lu",
              new_mode->name_len,
              new_mode->name,
              new_mode->nb_steps,
              new_mode->steps[0].mask,
-             new_mode->steps[0].duration);
+             (unsigned long)new_mode->steps[0].duration);
 
     memcpy(&task_data.modes[task_data.count], new_mode, sizeof(mode_t));
 
     ESP_LOGI(TAG,
-             "Added mode: %.*s, nb_steps=%u, mask[0]=%02x, duration[0]=%u",
+             "Added mode: %.*s, nb_steps=%u, mask[0]=%02x, duration[0]=%lu",
              task_data.modes[task_data.count].name_len,
              task_data.modes[task_data.count].name,
              task_data.modes[task_data.count].nb_steps,
              task_data.modes[task_data.count].steps[0].mask,
-             task_data.modes[task_data.count].steps[0].duration);
+             (unsigned long)task_data.modes[task_data.count].steps[0].duration);
 
     task_data.count++;
 
