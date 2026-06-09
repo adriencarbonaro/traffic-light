@@ -39,13 +39,11 @@ static esp_err_t on_version(httpd_req_t* req)
              "{"
              "\"firmware\":\"traffic-light\","
              "\"version\":\"%s\","
-             "\"build_id\":\"%s\","
              "\"build_date\":\"%s\","
              "\"build_time\":\"%s\","
              "\"chip\":\"ESP32-C3\""
              "}",
-             VERSION,
-             BUILD_ID_SHORT,
+             DESCRIBE,
              __DATE__,
              __TIME__);
 
