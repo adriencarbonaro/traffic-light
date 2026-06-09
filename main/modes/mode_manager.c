@@ -108,6 +108,12 @@ void mode_manager_task(void* arg)
 {
     uint16_t table_len = 0;
     const mode_t* table = get_standard_mode_table(&table_len);
+
+    for (uint16_t i = 0; i < table_len; i++)
+    {
+        mode_manager_add(&table[i]);
+    }
+
     ESP_LOGI(TAG, "sending");
     led_set(&table[0]);
 
