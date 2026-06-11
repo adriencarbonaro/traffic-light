@@ -1,5 +1,8 @@
 #include "mode_manager.h"
 
+#include <stdlib.h>
+#include <string.h>
+
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
@@ -30,6 +33,28 @@ TaskHandle_t mode_manager_task_handle = NULL;
 
 /* Static functions ***********************************************************/
 
+static inline size_t write_uint8(uint8_t* dst, uint8_t v)
+{
+    dst[0] = v;
+    return sizeof(uint8_t);
+}
+
+static inline size_t write_uint16(uint8_t* dst, uint16_t v)
+{
+    dst[0] = (uint8_t)(v & 0xff);
+    dst[1] = (uint8_t)((v >> 8) & 0xff);
+    return sizeof(uint16_t);
+}
+
+static inline size_t write_uint32(uint8_t* dst, uint32_t v)
+{
+    dst[0] = (uint8_t)(v & 0xff);
+    dst[1] = (uint8_t)((v >> 8) & 0xff);
+    dst[2] = (uint8_t)((v >> 16) & 0xff);
+    dst[3] = (uint8_t)((v >> 24) & 0xff);
+    return sizeof(uint32_t);
+}
+
 /* Public functions ***********************************************************/
 esp_err_t mode_manager_set_active(const char* name, uint16_t name_len)
 {
@@ -58,6 +83,52 @@ esp_err_t mode_manager_set_active(const char* name, uint16_t name_len)
     }
 
     return ESP_ERR_NOT_FOUND;
+}
+
+esp_err_t mode_manager_get(uint8_t** out_buf, size_t* out_len)
+{
+    if (out_buf == NULL || out_len == NULL) return ESP_ERR_INVALID_ARG;
+
+    /* Upper bound: a uint16 mode count, then for each mode its name_len(2) +
+       name(MAX_NAME_LEN) + loop(1) + nb_steps(2) and up to MAX_STEPS steps,
+       each a mask(1) + duration(4). All fields little-endian. */
+    size_t cap = sizeof(uint16_t) +
+                 (size_t)task_data.count *
+                     (2 + MAX_NAME_LEN + 1 + 2 + MAX_STEPS * (1 + 4));
+    uint8_t* buf = (uint8_t*)malloc(cap);
+    if (buf == NULL)
+    {
+        ESP_LOGE(TAG,
+                 "failed to allocate %u bytes for modes payload",
+                 (unsigned)cap);
+        return ESP_ERR_NO_MEM;
+    }
+
+    size_t off = 0;
+    off += write_uint16(&buf[off], task_data.count);
+
+    for (int i = 0; i < task_data.count; i++)
+    {
+        const mode_t* m = &task_data.modes[i];
+        uint16_t name_len =
+            m->name_len > MAX_NAME_LEN ? MAX_NAME_LEN : m->name_len;
+
+        off += write_uint16(&buf[off], name_len);
+        memcpy(&buf[off], m->name, name_len);
+        off += name_len;
+        off += write_uint8(&buf[off], (uint8_t)m->loop);
+        off += write_uint16(&buf[off], m->nb_steps);
+
+        for (uint16_t s = 0; s < m->nb_steps; s++)
+        {
+            off += write_uint8(&buf[off], m->steps[s].mask);
+            off += write_uint32(&buf[off], m->steps[s].duration);
+        }
+    }
+
+    *out_buf = buf;
+    *out_len = off;
+    return ESP_OK;
 }
 
 esp_err_t mode_manager_add(const mode_t* new_mode)
@@ -129,6 +200,14 @@ void mode_manager_task(void* arg)
 
             switch (new_event.event_cmd_type)
             {
+                case CMD_GET_MODES:
+                {
+                    /* Modes are served synchronously by the GET /get_modes
+                       HTTP endpoint, which reads task_data directly. Nothing
+                       to do here. */
+                    ESP_LOGI(TAG, "CMD_GET_MODES (served via /get_modes)");
+                    break;
+                }
                 case CMD_ADD_MODE:
                 {
                     ESP_LOGI(TAG, "CMD_ADD_MODE");

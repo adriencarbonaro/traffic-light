@@ -2,10 +2,15 @@
 #include "version.h"
 #include <esp_http_server.h>
 #include <esp_log.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 
 /* Prototypes *****************************************************************/
 
 static esp_err_t on_version(httpd_req_t* req);
+static esp_err_t on_version_json(httpd_req_t* req);
+static esp_err_t on_get_modes(httpd_req_t* req);
 static esp_err_t on_command(httpd_req_t* req);
 
 /* Defines ********************************************************************/
@@ -23,11 +28,39 @@ static esp_err_t on_command(httpd_req_t* req);
 static const char* TAG = "http_server";
 
 GET(version)
+GET(version_json)
+GET(get_modes)
 POST(command)
 
 /* Static functions ***********************************************************/
 
+/* Appends a length-prefixed string: [ len : uint16 LE ] [ bytes ]. */
+static size_t write_lp_str(uint8_t* dst, const char* s)
+{
+    uint16_t n = (uint16_t)strlen(s);
+    dst[0] = (uint8_t)(n & 0xff);
+    dst[1] = (uint8_t)((n >> 8) & 0xff);
+    memcpy(dst + 2, s, n);
+    return 2 + n;
+}
+
 static esp_err_t on_version(httpd_req_t* req)
+{
+    ESP_LOGI(TAG, "%s", __func__);
+
+    /* Just the version string (DESCRIBE), length-prefixed. The full identity
+       is available as JSON from /version_json. */
+    uint8_t buf[256];
+    size_t off = 0;
+    off += write_lp_str(&buf[off], DESCRIBE);
+
+    httpd_resp_set_type(req, "application/octet-stream");
+    httpd_resp_send(req, (const char*)buf, off);
+
+    return ESP_OK;
+}
+
+static esp_err_t on_version_json(httpd_req_t* req)
 {
     ESP_LOGI(TAG, "%s", __func__);
 
@@ -49,6 +82,25 @@ static esp_err_t on_version(httpd_req_t* req)
 
     httpd_resp_send(req, buf, HTTPD_RESP_USE_STRLEN);
 
+    return ESP_OK;
+}
+
+static esp_err_t on_get_modes(httpd_req_t* req)
+{
+    ESP_LOGI(TAG, "%s", __func__);
+
+    uint8_t* buf = NULL;
+    size_t len = 0;
+    if (mode_manager_get(&buf, &len) != ESP_OK || buf == NULL)
+    {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "modes");
+        return ESP_FAIL;
+    }
+
+    httpd_resp_set_type(req, "application/octet-stream");
+    httpd_resp_send(req, (const char*)buf, len);
+
+    free(buf);
     return ESP_OK;
 }
 
@@ -102,5 +154,7 @@ void http_server_init(void)
     ESP_LOGI(TAG, "Registering URI handlers");
 
     REGISTER(version)
+    REGISTER(version_json)
+    REGISTER(get_modes)
     REGISTER(command)
 }
