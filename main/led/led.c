@@ -85,7 +85,8 @@ void led_task(void* arg)
     io_conf.pull_up_en = 0;
     gpio_config(&io_conf);
 
-    apply_mask(LED_GREEN | LED_ORANGE | LED_RED);
+    /* Start dark: nothing lights up until a mode is applied. */
+    apply_mask(LED_NONE);
 
     ESP_LOGI(TAG, "preparing to receive");
     while (1)

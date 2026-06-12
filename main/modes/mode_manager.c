@@ -9,6 +9,7 @@
 #include "freertos/task.h"
 #include "mode_decoder.h"
 #include "modes.h"
+#include "nvs.h"
 
 /* Defines ********************************************************************/
 
@@ -16,11 +17,6 @@
 static const char* TAG = "mode_manager";
 static mode_event_t new_event = {0};
 static QueueHandle_t mode_manager_queue = NULL;
-static mode_t init_mode = {.name = "init_mode",
-                           .nb_steps = 1,
-                           .steps = {{.mask = 0x01, .duration = 1000},
-                                     {.mask = 0x02, .duration = 1000},
-                                     {.mask = 0x04, .duration = 1000}}};
 static mode_t custom_mode;
 
 static led_step_t steps_rx[MAX_STEPS] = {0};
@@ -53,6 +49,133 @@ static inline size_t write_uint32(uint8_t* dst, uint32_t v)
     dst[2] = (uint8_t)((v >> 16) & 0xff);
     dst[3] = (uint8_t)((v >> 24) & 0xff);
     return sizeof(uint32_t);
+}
+
+/* Persistence (NVS) **********************************************************/
+
+#define MODES_NVS_NS "tl_modes"
+#define MODES_KEY_SCHEMA "schema"
+#define MODES_KEY_COUNT "count"
+#define MODES_KEY_TABLE "table"
+#define MODES_KEY_ACTIVE "active"
+#define MODES_ACTIVE_NONE 0xFF
+
+/* Index of the active mode within the table, or MODES_ACTIVE_NONE when the
+   active mode isn't a stored one (custom / unset). */
+static uint8_t active_index(void)
+{
+    if (task_data.count > 0 && task_data.active_mode >= &task_data.modes[0] &&
+        task_data.active_mode <= &task_data.modes[task_data.count - 1])
+    {
+        return (uint8_t)(task_data.active_mode - &task_data.modes[0]);
+    }
+    return MODES_ACTIVE_NONE;
+}
+
+/* Persists the whole mode table (+ active index) to flash. Called after the
+   table changes (add / edit / delete). The schema key stores sizeof(mode_t) so
+   a future layout change is detected on load and triggers a clean re-seed. */
+static void modes_save(void)
+{
+    nvs_handle_t h;
+    esp_err_t err = nvs_open(MODES_NVS_NS, NVS_READWRITE, &h);
+    if (err != ESP_OK)
+    {
+        ESP_LOGW(TAG, "nvs_open (save) failed: %s", esp_err_to_name(err));
+        return;
+    }
+
+    err = nvs_set_u32(h, MODES_KEY_SCHEMA, (uint32_t)sizeof(mode_t));
+    if (err == ESP_OK) err = nvs_set_u8(h, MODES_KEY_COUNT, task_data.count);
+    if (err == ESP_OK && task_data.count > 0)
+    {
+        err = nvs_set_blob(h,
+                           MODES_KEY_TABLE,
+                           task_data.modes,
+                           (size_t)task_data.count * sizeof(mode_t));
+    }
+    if (err == ESP_OK) err = nvs_set_u8(h, MODES_KEY_ACTIVE, active_index());
+    if (err == ESP_OK) err = nvs_commit(h);
+
+    if (err != ESP_OK)
+        ESP_LOGW(TAG, "saving modes failed: %s", esp_err_to_name(err));
+    else
+        ESP_LOGI(TAG, "saved %u mode(s) to flash", task_data.count);
+
+    nvs_close(h);
+}
+
+/* Persists only the active-mode index — cheap path for set / next / custom,
+   which don't touch the table. */
+static void active_save(void)
+{
+    nvs_handle_t h;
+    if (nvs_open(MODES_NVS_NS, NVS_READWRITE, &h) != ESP_OK) return;
+    if (nvs_set_u8(h, MODES_KEY_ACTIVE, active_index()) == ESP_OK)
+    {
+        nvs_commit(h);
+    }
+    nvs_close(h);
+}
+
+/* Restores the mode table from flash into task_data. Returns ESP_OK if a
+   compatible table was found (even empty — meaning the user deleted all of
+   them); otherwise an error, with task_data left zeroed. */
+static esp_err_t modes_load(void)
+{
+    nvs_handle_t h;
+    esp_err_t err = nvs_open(MODES_NVS_NS, NVS_READONLY, &h);
+    if (err != ESP_OK) return err; /* ESP_ERR_NVS_NOT_FOUND on first boot */
+
+    uint32_t schema = 0;
+    err = nvs_get_u32(h, MODES_KEY_SCHEMA, &schema);
+    if (err != ESP_OK || schema != (uint32_t)sizeof(mode_t))
+    {
+        ESP_LOGW(TAG, "no compatible persisted modes (schema mismatch)");
+        nvs_close(h);
+        return ESP_ERR_INVALID_VERSION;
+    }
+
+    uint8_t count = 0;
+    err = nvs_get_u8(h, MODES_KEY_COUNT, &count);
+    if (err != ESP_OK)
+    {
+        nvs_close(h);
+        return err;
+    }
+    if (count > MAX_MODES) count = MAX_MODES;
+
+    if (count > 0)
+    {
+        size_t expected = (size_t)count * sizeof(mode_t);
+        size_t len = expected;
+        err = nvs_get_blob(h, MODES_KEY_TABLE, task_data.modes, &len);
+        if (err != ESP_OK || len != expected)
+        {
+            ESP_LOGW(TAG,
+                     "persisted table unreadable: %s",
+                     esp_err_to_name(err));
+            memset(&task_data, 0, sizeof(task_data));
+            nvs_close(h);
+            return ESP_FAIL;
+        }
+    }
+    task_data.count = count;
+
+    uint8_t active = MODES_ACTIVE_NONE;
+    nvs_get_u8(h, MODES_KEY_ACTIVE, &active); /* optional */
+    if (active != MODES_ACTIVE_NONE && active < task_data.count)
+        task_data.active_mode = &task_data.modes[active];
+    else
+        task_data.active_mode =
+            task_data.count > 0 ? &task_data.modes[0] : NULL;
+
+    nvs_close(h);
+    ESP_LOGI(TAG,
+             "restored %u mode(s) from flash (active=%u)",
+             task_data.count,
+             active);
+    return ESP_OK;
 }
 
 /* Public functions ***********************************************************/
@@ -92,9 +215,9 @@ esp_err_t mode_manager_get(uint8_t** out_buf, size_t* out_len)
     /* Upper bound: a uint16 mode count, then for each mode its name_len(2) +
        name(MAX_NAME_LEN) + loop(1) + nb_steps(2) and up to MAX_STEPS steps,
        each a mask(1) + duration(4). All fields little-endian. */
-    size_t cap = sizeof(uint16_t) +
-                 (size_t)task_data.count *
-                     (2 + MAX_NAME_LEN + 1 + 2 + MAX_STEPS * (1 + 4));
+    size_t cap =
+        sizeof(uint16_t) + (size_t)task_data.count *
+                               (2 + MAX_NAME_LEN + 1 + 2 + MAX_STEPS * (1 + 4));
     uint8_t* buf = (uint8_t*)malloc(cap);
     if (buf == NULL)
     {
@@ -312,16 +435,26 @@ static void mode_manager_next(void)
 
 void mode_manager_task(void* arg)
 {
-    uint16_t table_len = 0;
-    const mode_t* table = get_standard_mode_table(&table_len);
-
-    for (uint16_t i = 0; i < table_len; i++)
+    if (modes_load() != ESP_OK)
     {
-        mode_manager_add(&table[i]);
+        /* First boot (or incompatible saved data): seed with the standard
+           modes and persist them. */
+        ESP_LOGI(TAG, "no saved modes, seeding standard table");
+        uint16_t table_len = 0;
+        const mode_t* table = get_standard_mode_table(&table_len);
+        for (uint16_t i = 0; i < table_len; i++)
+        {
+            mode_manager_add(&table[i]);
+        }
+        /* Point the active mode at the first entry so it matches the lamps —
+           otherwise the first button click only re-syncs the pointer. */
+        if (task_data.count > 0) task_data.active_mode = &task_data.modes[0];
+        modes_save();
     }
 
-    ESP_LOGI(TAG, "sending");
-    led_set(&table[0]);
+    /* Reflect the active mode on the lamps (stays off if the table is empty).
+     */
+    if (task_data.active_mode != NULL) led_set(task_data.active_mode);
 
     while (1)
     {
@@ -346,37 +479,43 @@ void mode_manager_task(void* arg)
                 case CMD_ADD_MODE:
                 {
                     ESP_LOGI(TAG, "CMD_ADD_MODE");
-                    mode_manager_add(&mode_rx);
+                    if (mode_manager_add(&mode_rx) == ESP_OK) modes_save();
                     break;
                 }
                 case CMD_SET_MODE:
                 {
                     ESP_LOGI(TAG, "CMD_SET_MODE");
-                    mode_manager_set_active(mode_rx.name, mode_rx.name_len);
+                    if (mode_manager_set_active(mode_rx.name,
+                                                mode_rx.name_len) == ESP_OK)
+                        active_save();
                     break;
                 }
                 case CMD_CUSTOM_MODE:
                 {
                     ESP_LOGI(TAG, "CMD_CUSTOM_MODE");
                     mode_manager_set_custom(&mode_rx);
+                    active_save();
                     break;
                 }
                 case CMD_DELETE_MODE:
                 {
                     ESP_LOGI(TAG, "CMD_DELETE_MODE");
-                    mode_manager_delete(mode_rx.name, mode_rx.name_len);
+                    if (mode_manager_delete(mode_rx.name, mode_rx.name_len) ==
+                        ESP_OK)
+                        modes_save();
                     break;
                 }
                 case CMD_EDIT_MODE:
                 {
                     ESP_LOGI(TAG, "CMD_EDIT_MODE");
-                    mode_manager_edit(&mode_rx);
+                    if (mode_manager_edit(&mode_rx) == ESP_OK) modes_save();
                     break;
                 }
                 case CMD_NEXT_MODE:
                 {
                     ESP_LOGI(TAG, "CMD_NEXT_MODE");
                     mode_manager_next();
+                    active_save();
                     break;
                 }
                 default:
@@ -409,8 +548,8 @@ void mode_manager_init(void)
 {
     memset(&task_data, 0, sizeof(mode_manager_task_data_t));
 
-    task_data.active_mode = &init_mode;
-
+    /* active_mode stays NULL until the task loads the standard modes. If no
+       mode is available, the lamps simply stay off. */
     mode_manager_queue = xQueueCreate(10, sizeof(mode_event_t));
 
     xTaskCreate(mode_manager_task,
