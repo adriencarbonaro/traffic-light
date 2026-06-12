@@ -17,7 +17,8 @@ typedef enum
     }
 
 static const mode_t standard_modes_table[] = {
-    MODE("ON", true, {.mask = LED_ALL, .duration = 3000}),
+    MODE("OFF", true, {.mask = LED_NONE, .duration = 10000}),
+    MODE("ON", true, {.mask = LED_ALL, .duration = 10000}),
     MODE("Test",
          true,
          {.mask = LED_GREEN, .duration = 500},
