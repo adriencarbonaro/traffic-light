@@ -7,7 +7,7 @@
 #include "led.h"
 
 #define MAX_MODES 100
-#define MAX_NAME_LEN 16
+#define MAX_NAME_LEN 100
 
 typedef struct mode_t
 {
