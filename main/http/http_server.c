@@ -11,6 +11,7 @@
 static esp_err_t on_version(httpd_req_t* req);
 static esp_err_t on_version_json(httpd_req_t* req);
 static esp_err_t on_get_modes(httpd_req_t* req);
+static esp_err_t on_get_mode(httpd_req_t* req);
 static esp_err_t on_command(httpd_req_t* req);
 
 /* Defines ********************************************************************/
@@ -30,6 +31,7 @@ static const char* TAG = "http_server";
 GET(version)
 GET(version_json)
 GET(get_modes)
+GET(get_mode)
 POST(command)
 
 /* Static functions ***********************************************************/
@@ -104,6 +106,25 @@ static esp_err_t on_get_modes(httpd_req_t* req)
     return ESP_OK;
 }
 
+static esp_err_t on_get_mode(httpd_req_t* req)
+{
+    ESP_LOGI(TAG, "%s", __func__);
+
+    uint8_t* buf = NULL;
+    size_t len = 0;
+    if (mode_manager_get_active(&buf, &len) != ESP_OK || buf == NULL)
+    {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "mode");
+        return ESP_FAIL;
+    }
+
+    httpd_resp_set_type(req, "application/octet-stream");
+    httpd_resp_send(req, (const char*)buf, len);
+
+    free(buf);
+    return ESP_OK;
+}
+
 static esp_err_t on_command(httpd_req_t* req)
 {
     ESP_LOGI(TAG, "%s", __func__);
@@ -156,5 +177,6 @@ void http_server_init(void)
     REGISTER(version)
     REGISTER(version_json)
     REGISTER(get_modes)
+    REGISTER(get_mode)
     REGISTER(command)
 }

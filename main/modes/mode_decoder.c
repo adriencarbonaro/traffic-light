@@ -82,6 +82,33 @@ void parse_command(const uint8_t* data,
 
             break;
         }
+        case CMD_DELETE_MODE:
+        {
+            /* Name only, same layout as CMD_SET_MODE. */
+            idx += read_uint16(&data[idx], &mode->name_len);
+            if (mode->name_len > MAX_NAME_LEN) mode->name_len = MAX_NAME_LEN;
+            idx += read_str(&data[idx], (uint8_t*)&mode->name, mode->name_len);
+
+            break;
+        }
+        case CMD_EDIT_MODE:
+        {
+            /* Name + full step body, same layout as CMD_ADD_MODE. */
+            idx += read_uint16(&data[idx], &mode->name_len);
+            if (mode->name_len > MAX_NAME_LEN) mode->name_len = MAX_NAME_LEN;
+            idx += read_str(&data[idx], (uint8_t*)&mode->name, mode->name_len);
+            idx += read_uint8(&data[idx], (uint8_t*)&mode->loop);
+            idx += read_uint16(&data[idx], &mode->nb_steps);
+            if (mode->nb_steps > MAX_STEPS) mode->nb_steps = MAX_STEPS;
+
+            for (uint16_t i = 0; i < mode->nb_steps; i++)
+            {
+                idx += read_uint8(&data[idx], &mode->steps[i].mask);
+                idx += read_uint32(&data[idx], &mode->steps[i].duration);
+            }
+
+            break;
+        }
         default:
             break;
     }

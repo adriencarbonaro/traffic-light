@@ -166,6 +166,114 @@ esp_err_t mode_manager_add(const mode_t* new_mode)
     return ESP_OK;
 }
 
+esp_err_t mode_manager_get_active(uint8_t** out_buf, size_t* out_len)
+{
+    if (out_buf == NULL || out_len == NULL) return ESP_ERR_INVALID_ARG;
+
+    const mode_t* m = task_data.active_mode;
+    uint16_t name_len = 0;
+    if (m != NULL)
+    {
+        name_len = m->name_len > MAX_NAME_LEN ? MAX_NAME_LEN : m->name_len;
+    }
+
+    uint8_t* buf = (uint8_t*)malloc(sizeof(uint16_t) + name_len);
+    if (buf == NULL) return ESP_ERR_NO_MEM;
+
+    size_t off = 0;
+    off += write_uint16(&buf[off], name_len);
+    if (m != NULL && name_len > 0)
+    {
+        memcpy(&buf[off], m->name, name_len);
+        off += name_len;
+    }
+
+    *out_buf = buf;
+    *out_len = off;
+    return ESP_OK;
+}
+
+esp_err_t mode_manager_delete(const char* name, uint16_t name_len)
+{
+    (void)name_len;
+
+    for (int i = 0; i < task_data.count; i++)
+    {
+        if (strncmp(task_data.modes[i].name, name, MAX_NAME_LEN) != 0) continue;
+
+        /* Track the active mode by index so we can re-point it after the
+           in-place shift (the pointer alone would silently follow the slot). */
+        int active_idx = -1;
+        if (task_data.count > 0 &&
+            task_data.active_mode >= &task_data.modes[0] &&
+            task_data.active_mode <= &task_data.modes[task_data.count - 1])
+        {
+            active_idx = (int)(task_data.active_mode - &task_data.modes[0]);
+        }
+
+        ESP_LOGI(TAG,
+                 "Deleting mode: %.*s (slot %d)",
+                 task_data.modes[i].name_len,
+                 task_data.modes[i].name,
+                 i);
+
+        for (int j = i; j < task_data.count - 1; j++)
+        {
+            task_data.modes[j] = task_data.modes[j + 1];
+        }
+        task_data.count--;
+        memset(&task_data.modes[task_data.count], 0, sizeof(mode_t));
+
+        if (active_idx == i)
+        {
+            /* The active mode was removed: fall back to the first remaining. */
+            task_data.active_mode =
+                task_data.count > 0 ? &task_data.modes[0] : NULL;
+            if (task_data.active_mode) led_set(task_data.active_mode);
+        }
+        else if (active_idx > i)
+        {
+            task_data.active_mode = &task_data.modes[active_idx - 1];
+        }
+
+        return ESP_OK;
+    }
+
+    return ESP_ERR_NOT_FOUND;
+}
+
+esp_err_t mode_manager_edit(const mode_t* new_mode)
+{
+    for (int i = 0; i < task_data.count; i++)
+    {
+        if (strncmp(task_data.modes[i].name, new_mode->name, MAX_NAME_LEN) != 0)
+        {
+            continue;
+        }
+
+        ESP_LOGI(TAG,
+                 "Editing mode: %.*s, nb_steps=%u",
+                 task_data.modes[i].name_len,
+                 task_data.modes[i].name,
+                 new_mode->nb_steps);
+
+        task_data.modes[i].loop = new_mode->loop;
+        task_data.modes[i].nb_steps = new_mode->nb_steps;
+        memcpy(task_data.modes[i].steps,
+               new_mode->steps,
+               sizeof(task_data.modes[i].steps));
+
+        if (task_data.active_mode == &task_data.modes[i])
+        {
+            led_set(task_data.active_mode);
+        }
+
+        return ESP_OK;
+    }
+
+    return ESP_ERR_NOT_FOUND;
+}
+
 esp_err_t mode_manager_set_custom(const mode_t* custom)
 {
     memcpy(&custom_mode, custom, sizeof(mode_t));
@@ -224,6 +332,18 @@ void mode_manager_task(void* arg)
                 {
                     ESP_LOGI(TAG, "CMD_CUSTOM_MODE");
                     mode_manager_set_custom(&mode_rx);
+                    break;
+                }
+                case CMD_DELETE_MODE:
+                {
+                    ESP_LOGI(TAG, "CMD_DELETE_MODE");
+                    mode_manager_delete(mode_rx.name, mode_rx.name_len);
+                    break;
+                }
+                case CMD_EDIT_MODE:
+                {
+                    ESP_LOGI(TAG, "CMD_EDIT_MODE");
+                    mode_manager_edit(&mode_rx);
                     break;
                 }
                 default:
