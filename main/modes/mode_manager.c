@@ -283,6 +283,33 @@ esp_err_t mode_manager_set_custom(const mode_t* custom)
     return ESP_OK;
 }
 
+/* Advances the active mode to the next one in the table, wrapping around. If
+   the active mode isn't part of the table (e.g. custom / unset), starts at the
+   first. Runs on the mode_manager task, so task_data is touched from a single
+   context. */
+static void mode_manager_next(void)
+{
+    if (task_data.count == 0) return;
+
+    int idx = -1;
+    if (task_data.active_mode >= &task_data.modes[0] &&
+        task_data.active_mode <= &task_data.modes[task_data.count - 1])
+    {
+        idx = (int)(task_data.active_mode - &task_data.modes[0]);
+    }
+
+    int next = (idx + 1) % task_data.count; /* idx == -1 -> 0 */
+    task_data.active_mode = &task_data.modes[next];
+
+    ESP_LOGI(TAG,
+             "Next mode: %.*s (slot %d)",
+             task_data.active_mode->name_len,
+             task_data.active_mode->name,
+             next);
+
+    led_set(task_data.active_mode);
+}
+
 void mode_manager_task(void* arg)
 {
     uint16_t table_len = 0;
@@ -344,6 +371,12 @@ void mode_manager_task(void* arg)
                 {
                     ESP_LOGI(TAG, "CMD_EDIT_MODE");
                     mode_manager_edit(&mode_rx);
+                    break;
+                }
+                case CMD_NEXT_MODE:
+                {
+                    ESP_LOGI(TAG, "CMD_NEXT_MODE");
+                    mode_manager_next();
                     break;
                 }
                 default:

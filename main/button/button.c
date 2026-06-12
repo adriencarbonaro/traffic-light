@@ -1,7 +1,10 @@
+#include <stdint.h>
+
 #include "button_config.h"
 #include "button_gpio.h"
 #include "esp_log.h"
 #include "iot_button.h"
+#include "mode_manager.h"
 #include "utils.h"
 
 typedef struct
@@ -17,7 +20,9 @@ static const char* TAG = "button";
 /* Static functions ***********************************************************/
 static void button_single_click_event_cb(void* arg, void* data)
 {
-    ESP_LOGI(TAG, "Button single click!");
+    ESP_LOGI(TAG, "Button single click! -> next mode");
+    uint8_t cmd = CMD_NEXT_MODE;
+    mode_manager_event(&cmd, sizeof(cmd));
 }
 
 static void button_double_click_event_cb(void* arg, void* data)

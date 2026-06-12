@@ -19,6 +19,7 @@ typedef enum
     CMD_CUSTOM_MODE,
     CMD_DELETE_MODE,
     CMD_EDIT_MODE,
+    CMD_NEXT_MODE,
 } command_id_t;
 
 typedef struct
