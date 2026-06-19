@@ -4,7 +4,7 @@
 
 An **ESP32-C3**-powered controller that brings a salvaged **SAGEM pedestrian traffic light** back to life over Wi-Fi.
 
-The firmware drives the three led boards (green / orange / red) through user-defined **modes** — named, looping sequences of timed steps — and exposes a small **binary HTTP API** so a companion mobile app can list, create, edit, play, and delete modes on the device.
+The firmware drives the three led boards (green / orange / red) through user-defined **modes** — named, looping sequences of timed steps — and exposes a small **binary HTTP API** so a [companion mobile app](https://github.com/adriencarbonaro/traffic-light-companion-app) can list, create, edit, play, and delete modes on the device.
 
 ## ✨ Features
 
@@ -70,11 +70,5 @@ idf.py set-target esp32c3
 idf.py menuconfig
 idf.py build flash monitor
 ```
-
-## Mobile App
-
-![](./docs/traffic_light_mobile_app_01.jpg)
-![](./docs/traffic_light_mobile_app_02.jpg)
-![](./docs/traffic_light_mobile_app_03.jpg)
 
 *Made with ☕ and lots of light in the eyes.*
